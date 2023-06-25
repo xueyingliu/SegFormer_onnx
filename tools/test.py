@@ -15,8 +15,8 @@ from IPython import embed
 def parse_args():
     parser = argparse.ArgumentParser(
         description='mmseg test (and eval) a model')
-    parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file')
+    parser.add_argument('--config', default="local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py", help='test config file path')
+    parser.add_argument('--checkpoint', default="checkpoints/segformer.b1.512x512.ade.160k.pth", help='checkpoint file')
     parser.add_argument(
         '--aug-test', action='store_true', help='Use Flip and Multi scale aug')
     parser.add_argument('--out', default='work_dirs/res.pkl', help='output result file in pickle format')

@@ -11,6 +11,10 @@ from mmcv.image import tensor2imgs
 from mmcv.runner import get_dist_info
 from IPython import embed
 from mmseg.ops import resize
+import onnx
+import onnxruntime as ort
+from torchvision.transforms import Resize
+import cv2
 
 def np2tmp(array, temp_file_name=None):
     """Save ndarray to local numpy file.
@@ -56,10 +60,17 @@ def single_gpu_test(model,
     results = []
     dataset = data_loader.dataset
     prog_bar = mmcv.ProgressBar(len(dataset))
+    # 加载ONNX模型
+    onnx_model = onnx.load('segformer.b1.512x512.ade.160k.onnx')
+    ort_session = ort.InferenceSession('segformer.b1.512x512.ade.160k.onnx', providers=['CUDAExecutionProvider'])
+    torch_resize = Resize([512,512])
+
     for i, data in enumerate(data_loader):
         with torch.no_grad():
-            result = model(return_loss=False, **data)
-
+            # result = model(return_loss=False, **data)
+            input_data = torch_resize(data['img'][0])
+            ort_img_np = input_data.cpu().numpy()
+            result = ort_session.run(None, {'img': ort_img_np})
         if show or out_dir:
             img_tensor = data['img'][0]
             img_metas = data['img_metas'][0].data[0]

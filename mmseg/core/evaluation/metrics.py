@@ -1,5 +1,6 @@
 import mmcv
 import numpy as np
+import cv2
 
 
 def intersect_and_union(pred_label,
@@ -45,6 +46,12 @@ def intersect_and_union(pred_label,
         label[label == 254] = 255
 
     mask = (label != ignore_index)
+    # label = np.resize(label, (512, 512))
+    # mask = np.resize(mask, (512, 512))
+    pred_label = np.squeeze(pred_label).astype(np.uint8)
+    pred_label = cv2.resize(pred_label, (label.shape[1],label.shape[0]))
+
+    # cv2.imwrite("pred.png", pred_label)
     pred_label = pred_label[mask]
     label = label[mask]
 

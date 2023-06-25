@@ -6,7 +6,9 @@ from mmcv.runner import load_checkpoint
 
 from mmseg.datasets.pipelines import Compose
 from mmseg.models import build_segmentor
-
+from torchvision.transforms import Resize 
+import onnx
+import numpy as np
 
 def init_segmentor(config, checkpoint=None, device='cuda:0'):
     """Initialize a segmentor from config file.
@@ -91,9 +93,27 @@ def inference_segmentor(model, img):
         data = scatter(data, [device])[0]
     else:
         data['img_metas'] = [i.data[0] for i in data['img_metas']]
-
+    torch_resize = Resize([512,512])    
+    input_data_img = torch_resize(data['img'][0])
+    input_data_metas = data['img_metas'][0][0]
     # forward the model
     with torch.no_grad():
+        model = model.eval()
+        # 导出onnx
+        torch.onnx.export(
+            model,
+            (input_data_img,data['img_metas']),
+            "segformer.b1.512x512.ade.160k.onnx",
+            verbose=True, 
+            input_names=['img', 'img_metas'], 
+            output_names=['logits'])
+
+        # 加载ONNX模型
+        onnx_model = onnx.load('segformer.b1.512x512.ade.160k.onnx')
+        ort_session = ort.InferenceSession('segformer.b1.512x512.ade.160k.onnx')
+        outputs = ort_session.run(None, {'img': input_data_img.cpu().numpy(), 'img_metas': data['img_metas'][0]})
+        outputs[0] =  np.squeeze(outputs[0])
+
         result = model(return_loss=False, rescale=True, **data)
     return result
 

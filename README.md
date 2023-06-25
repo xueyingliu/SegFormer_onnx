@@ -3,116 +3,187 @@
 
 # SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
 
-<!-- ![image](resources/image.png) -->
-<div align="center">
-  <img src="./resources/image.png" height="400">
-</div>
-<p align="center">
-  Figure 1: Performance of SegFormer-B0 to SegFormer-B5.
-</p>
-
-### [Project page](https://github.com/NVlabs/SegFormer) | [Paper](https://arxiv.org/abs/2105.15203) | [Demo (Youtube)](https://www.youtube.com/watch?v=J0MoRQzZe8U) | [Demo (Bilibili)](https://www.bilibili.com/video/BV1MV41147Ko/) | [Intro Video](https://www.youtube.com/watch?v=nBjXyoltCHU)
-
-SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers.<br>
-[Enze Xie](https://xieenze.github.io/), [Wenhai Wang](https://whai362.github.io/), [Zhiding Yu](https://chrisding.github.io/), [Anima Anandkumar](http://tensorlab.cms.caltech.edu/users/anima/), [Jose M. Alvarez](https://rsu.data61.csiro.au/people/jalvarez/), and [Ping Luo](http://luoping.me/).<br>
-NeurIPS 2021.
-
-This repository contains the official Pytorch implementation of training & evaluation code and the pretrained models for [SegFormer](https://arxiv.org/abs/2105.15203).
-
-SegFormer is a simple, efficient and powerful semantic segmentation method, as shown in Figure 1.
-
-We use [MMSegmentation v0.13.0](https://github.com/open-mmlab/mmsegmentation/tree/v0.13.0) as the codebase.
-
-🔥🔥 SegFormer is on [MMSegmentation](https://github.com/open-mmlab/mmsegmentation/tree/master/configs/segformer). 🔥🔥 
-
 
 ## Installation
 
-For install and data preparation, please refer to the guidelines in [MMSegmentation v0.13.0](https://github.com/open-mmlab/mmsegmentation/tree/v0.13.0).
+环境，为了适配onnx推理，安装的库版本与原始segformer不同
 
-Other requirements:
-```pip install timm==0.3.2```
+onnx                      1.14.0  
+onnxruntime-gpu           1.15.1  
+torch                     1.11.0+cu113
+torchvision               0.12.0+cu113
+mmcv-full                 1.7.1
+timm                      0.9.2
 
-An example (works for me): ```CUDA 10.1``` and  ```pytorch 1.7.1``` 
-
-```
-pip install torchvision==0.8.2
-pip install timm==0.3.2
-pip install mmcv-full==1.2.7
-pip install opencv-python==4.5.1.48
-cd SegFormer && pip install -e . --user
-```
 
 ## Evaluation
 
-Download `trained weights`. 
-(
-[google drive](https://drive.google.com/drive/folders/1GAku0G0iR9DsBxCbfENWMJ27c5lYUeQA?usp=sharing) | 
-[onedrive](https://connecthkuhk-my.sharepoint.com/:f:/g/personal/xieenze_connect_hku_hk/Ept_oetyUGFCsZTKiL_90kUBy5jmPV65O5rJInsnRCDWJQ?e=CvGohw)
-)
-
-Example: evaluate ```SegFormer-B1``` on ```ADE20K```:
-
 ```
 # Single-gpu testing
-python tools/test.py local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py /path/to/checkpoint_file
-
-# Multi-gpu testing
-./tools/dist_test.sh local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py /path/to/checkpoint_file <GPU_NUM>
-
-# Multi-gpu, multi-scale testing
-tools/dist_test.sh local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py /path/to/checkpoint_file <GPU_NUM> --aug-test
-```
-
-## Training
-
-Download `weights` 
-(
-[google drive](https://drive.google.com/drive/folders/1b7bwrInTW4VLEm27YawHOAMSMikga2Ia?usp=sharing) | 
-[onedrive](https://connecthkuhk-my.sharepoint.com/:f:/g/personal/xieenze_connect_hku_hk/EvOn3l1WyM5JpnMQFSEO5b8B7vrHw9kDaJGII-3N9KNhrg?e=cpydzZ)
-) 
-pretrained on ImageNet-1K, and put them in a folder ```pretrained/```.
-
-Example: train ```SegFormer-B1``` on ```ADE20K```:
+python tools/test.py
 
 ```
-# Single-gpu training
-python tools/train.py local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py 
+## onnx模型精度
+per class results:
 
-# Multi-gpu training
-./tools/dist_train.sh local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py <GPU_NUM>
-```
++---------------------+-------+-------+
+| Class               | IoU   | Acc   |
++---------------------+-------+-------+
+| wall                | 72.07 | 86.81 |
+| building            | 79.45 | 92.07 |
+| sky                 | 92.76 | 96.6  |
+| floor               | 76.12 | 88.06 |
+| tree                | 70.99 | 86.75 |
+| ceiling             | 79.91 | 89.21 |
+| road                | 77.52 | 86.01 |
+| bed                 | 81.18 | 91.3  |
+| windowpane          | 55.16 | 71.81 |
+| grass               | 65.03 | 84.52 |
+| cabinet             | 53.38 | 69.29 |
+| sidewalk            | 57.18 | 75.61 |
+| person              | 72.28 | 89.42 |
+| earth               | 30.21 | 41.78 |
+| door                | 37.87 | 53.51 |
+| table               | 47.85 | 62.15 |
+| mountain            | 48.16 | 64.42 |
+| plant               | 48.83 | 59.17 |
+| curtain             | 66.15 | 78.84 |
+| chair               | 47.22 | 64.41 |
+| car                 | 79.56 | 89.83 |
+| water               | 50.72 | 71.74 |
+| painting            | 66.68 | 81.57 |
+| sofa                | 54.99 | 72.48 |
+| shelf               | 38.87 | 58.62 |
+| house               | 37.59 | 47.37 |
+| sea                 | 47.58 | 63.24 |
+| mirror              | 52.58 | 64.17 |
+| rug                 | 52.69 | 57.86 |
+| field               | 26.11 | 39.14 |
+| armchair            | 32.8  | 52.19 |
+| seat                | 55.14 | 72.22 |
+| fence               | 38.32 | 53.61 |
+| desk                | 40.22 | 58.99 |
+| rock                | 32.56 | 50.67 |
+| wardrobe            | 42.13 | 54.64 |
+| lamp                | 50.07 | 62.97 |
+| bathtub             | 61.89 | 69.67 |
+| railing             | 29.51 | 41.04 |
+| cushion             | 44.78 | 58.94 |
+| base                | 18.2  | 26.86 |
+| box                 | 15.07 | 20.82 |
+| column              | 33.82 | 45.21 |
+| signboard           | 31.26 | 40.93 |
+| chest of drawers    | 38.42 | 57.21 |
+| counter             | 35.7  | 47.54 |
+| sand                | 27.96 | 43.13 |
+| sink                | 59.83 | 71.07 |
+| skyscraper          | 56.83 | 67.81 |
+| fireplace           | 62.81 | 77.54 |
+| refrigerator        | 56.87 | 73.96 |
+| grandstand          | 37.48 | 65.08 |
+| path                | 20.05 | 29.06 |
+| stairs              | 24.91 | 32.93 |
+| runway              | 65.95 | 86.25 |
+| case                | 36.91 | 47.43 |
+| pool table          | 88.63 | 94.28 |
+| pillow              | 40.52 | 50.5  |
+| screen door         | 37.3  | 46.98 |
+| stairway            | 26.1  | 31.77 |
+| river               | 12.92 | 20.06 |
+| bridge              | 27.13 | 36.15 |
+| bookcase            | 35.73 | 56.06 |
+| blind               | 35.74 | 39.57 |
+| coffee table        | 49.53 | 68.19 |
+| toilet              | 75.72 | 86.55 |
+| flower              | 31.68 | 44.45 |
+| book                | 42.11 | 58.14 |
+| hill                | 9.86  | 15.34 |
+| bench               | 36.05 | 47.18 |
+| countertop          | 48.29 | 66.62 |
+| stove               | 59.33 | 67.26 |
+| palm                | 45.32 | 60.22 |
+| kitchen island      | 26.92 | 47.4  |
+| computer            | 53.54 | 65.17 |
+| swivel chair        | 32.0  | 39.26 |
+| boat                | 45.08 | 55.37 |
+| bar                 | 29.56 | 32.85 |
+| arcade machine      | 39.55 | 42.99 |
+| hovel               | 30.28 | 33.72 |
+| bus                 | 75.33 | 81.22 |
+| towel               | 48.7  | 63.43 |
+| light               | 43.69 | 48.25 |
+| truck               | 25.69 | 36.92 |
+| tower               | 7.66  | 9.6   |
+| chandelier          | 55.55 | 66.96 |
+| awning              | 19.13 | 23.36 |
+| streetlight         | 15.76 | 19.13 |
+| booth               | 39.0  | 42.1  |
+| television receiver | 58.2  | 70.01 |
+| airplane            | 54.32 | 62.43 |
+| dirt track          | 17.8  | 26.74 |
+| apparel             | 12.04 | 22.65 |
+| pole                | 15.58 | 20.24 |
+| land                | 1.73  | 2.2   |
+| bannister           | 3.17  | 4.5   |
+| escalator           | 23.78 | 29.32 |
+| ottoman             | 18.24 | 22.72 |
+| bottle              | 22.06 | 32.99 |
+| buffet              | 32.33 | 35.22 |
+| poster              | 16.44 | 26.17 |
+| stage               | 12.36 | 16.95 |
+| van                 | 35.33 | 48.07 |
+| ship                | 63.51 | 83.74 |
+| fountain            | 10.07 | 10.31 |
+| conveyer belt       | 52.77 | 62.52 |
+| canopy              | 12.88 | 14.0  |
+| washer              | 63.29 | 68.8  |
+| plaything           | 17.55 | 25.68 |
+| swimming pool       | 37.83 | 60.44 |
+| stool               | 27.12 | 35.8  |
+| barrel              | 35.52 | 63.85 |
+| basket              | 23.48 | 31.59 |
+| waterfall           | 53.84 | 65.12 |
+| tent                | 91.59 | 96.71 |
+| bag                 | 11.13 | 16.43 |
+| minibike            | 52.51 | 63.79 |
+| cradle              | 76.1  | 89.07 |
+| oven                | 26.26 | 54.54 |
+| ball                | 43.36 | 53.27 |
+| food                | 36.94 | 41.13 |
+| step                | 7.29  | 8.64  |
+| tank                | 34.84 | 37.02 |
+| trade name          | 16.69 | 17.98 |
+| microwave           | 45.05 | 49.95 |
+| pot                 | 24.55 | 28.09 |
+| animal              | 53.1  | 56.91 |
+| bicycle             | 41.4  | 65.86 |
+| lake                | 34.88 | 40.95 |
+| dishwasher          | 48.42 | 58.53 |
+| screen              | 52.12 | 70.4  |
+| blanket             | 14.41 | 17.85 |
+| sculpture           | 39.25 | 43.32 |
+| hood                | 41.0  | 45.04 |
+| sconce              | 33.23 | 42.16 |
+| vase                | 23.0  | 35.06 |
+| traffic light       | 16.8  | 24.43 |
+| tray                | 2.15  | 2.85  |
+| ashcan              | 29.24 | 38.38 |
+| fan                 | 47.27 | 54.92 |
+| pier                | 46.14 | 60.71 |
+| crt screen          | 0.02  | 0.06  |
+| plate               | 46.28 | 56.84 |
+| monitor             | 6.94  | 7.63  |
+| bulletin board      | 31.01 | 42.26 |
+| shower              | 0.56  | 0.75  |
+| radiator            | 45.61 | 54.08 |
+| glass               | 5.22  | 5.63  |
+| clock               | 23.98 | 27.8  |
+| flag                | 27.45 | 29.09 |
++---------------------+-------+-------+
+Summary:
 
-## Visualize
-
-Here is a demo script to test a single image. More details refer to [MMSegmentation's Doc](https://mmsegmentation.readthedocs.io/en/latest/get_started.html).
-
-```shell
-python demo/image_demo.py ${IMAGE_FILE} ${CONFIG_FILE} ${CHECKPOINT_FILE} [--device ${DEVICE_NAME}] [--palette-thr ${PALETTE}]
-```
-
-Example: visualize ```SegFormer-B1``` on ```CityScapes```: 
-
-```shell
-python demo/image_demo.py demo/demo.png local_configs/segformer/B1/segformer.b1.512x512.ade.160k.py \
-/path/to/checkpoint_file --device cuda:0 --palette cityscapes
-```
-
-
-
-
-
-## License
-Please check the LICENSE file. SegFormer may be used non-commercially, meaning for research or 
-evaluation purposes only. For business inquiries, please visit our website and submit the form: [NVIDIA Research Licensing](https://www.nvidia.com/en-us/research/inquiries/).
-
-
-## Citation
-```
-@inproceedings{xie2021segformer,
-  title={SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers},
-  author={Xie, Enze and Wang, Wenhai and Yu, Zhiding and Anandkumar, Anima and Alvarez, Jose M and Luo, Ping},
-  booktitle={Neural Information Processing Systems (NeurIPS)},
-  year={2021}
-}
-```
++--------+-------+-------+-------+
+| Scope  | mIoU  | mAcc  | aAcc  |
++--------+-------+-------+-------+
+| global | 40.02 | 50.42 | 78.99 |
++--------+-------+-------+-------+

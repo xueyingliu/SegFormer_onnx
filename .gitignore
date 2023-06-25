@@ -119,3 +119,6 @@ pretrained/
 *.pth
 trash/
 trash
+
+/data
+/checkpoints
