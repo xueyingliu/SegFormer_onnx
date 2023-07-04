@@ -13,5 +13,5 @@ img = 'demo/2.jpg'
 result = inference_segmentor(model, img)
 
 
-# show the results
+# show the result
 show_result_pyplot(model, img, result, get_palette('ade'))
