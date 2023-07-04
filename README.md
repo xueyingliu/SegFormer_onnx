@@ -6,7 +6,7 @@
 
 ## Installation
 
-环境，为了适配onnx推理，安装的库版本与原始segformer不同
+To export onnx model，requirement is different from origin segformer
 
 onnx                      1.14.0  
 onnxruntime-gpu           1.15.1  
@@ -15,7 +15,12 @@ torchvision               0.12.0+cu113
 mmcv-full                 1.7.1  
 timm                      0.9.2  
 
+## Export onnx
 
+```
+python infer.py
+
+```
 ## Evaluation
 
 ```
@@ -23,7 +28,7 @@ timm                      0.9.2
 python tools/test.py
 
 ```
-## onnx模型精度
+## onnx model performance in ADE dataset
 per class results:
 
 +---------------------+-------+-------+  
