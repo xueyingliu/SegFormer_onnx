@@ -15,7 +15,7 @@ torchvision               0.12.0+cu113
 mmcv-full                 1.7.1  
 timm                      0.9.2  
 
-## Export onnx
+## inference and export onnx
 
 ```
 python infer.py
