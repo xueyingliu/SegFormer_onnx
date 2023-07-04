@@ -81,11 +81,11 @@ class EncoderDecoder(BaseSegmentor):
             x = self.neck(x)
         return x
 
-    def encode_decode(self, img, img_metas):
+    def encode_decode(self, img):
         """Encode images with backbone and decode into a semantic segmentation
         map of the same size as input."""
         x = self.extract_feat(img)
-        out = self._decode_head_forward_test(x, img_metas)
+        out = self._decode_head_forward_test(x) # 1，19，128，181
         out = resize(
             input=out,
             size=img.shape[2:],
@@ -104,10 +104,10 @@ class EncoderDecoder(BaseSegmentor):
         losses.update(add_prefix(loss_decode, 'decode'))
         return losses
 
-    def _decode_head_forward_test(self, x, img_metas):
+    def _decode_head_forward_test(self, x):
         """Run forward function and calculate loss for decode head in
         inference."""
-        seg_logits = self.decode_head.forward_test(x, img_metas, self.test_cfg)
+        seg_logits = self.decode_head.forward_test(x)
         return seg_logits
 
     def _auxiliary_head_forward_train(self, x, img_metas, gt_semantic_seg):
@@ -211,21 +211,21 @@ class EncoderDecoder(BaseSegmentor):
                 warning=False)
         return preds
 
-    def whole_inference(self, img, img_meta, rescale):
+    def whole_inference(self, img, rescale):
         """Inference with full image."""
 
-        seg_logit = self.encode_decode(img, img_meta)
-        if rescale:
-            seg_logit = resize(
-                seg_logit,
-                size=img_meta[0]['ori_shape'][:2],
-                mode='bilinear',
-                align_corners=self.align_corners,
-                warning=False)
+        seg_logit = self.encode_decode(img)  # img:[1,3,512,704]
+        # if rescale:
+        #     seg_logit = resize(
+        #         seg_logit,
+        #         size=img_meta[0]['ori_shape'][:2],
+        #         mode='bilinear',
+        #         align_corners=self.align_corners,
+        #         warning=False)
 
-        return seg_logit
+        return seg_logit # 1，19，497，700
 
-    def inference(self, img, img_meta, rescale):
+    def inference(self, img, rescale):
         """Inference with slide/whole style.
 
         Args:
@@ -242,27 +242,27 @@ class EncoderDecoder(BaseSegmentor):
         """
 
         assert self.test_cfg.mode in ['slide', 'whole']
-        ori_shape = img_meta[0]['ori_shape']
-        assert all(_['ori_shape'] == ori_shape for _ in img_meta)
+        # ori_shape = img_meta[0]['ori_shape']
+        # assert all(_['ori_shape'] == ori_shape for _ in img_meta)
         if self.test_cfg.mode == 'slide':
-            seg_logit = self.slide_inference(img, img_meta, rescale)
+            seg_logit = self.slide_inference(img, True, rescale)
         else:
-            seg_logit = self.whole_inference(img, img_meta, rescale)
+            seg_logit = self.whole_inference(img, rescale)
         output = F.softmax(seg_logit, dim=1)
-        flip = img_meta[0]['flip']
-        if flip:
-            flip_direction = img_meta[0]['flip_direction']
-            assert flip_direction in ['horizontal', 'vertical']
-            if flip_direction == 'horizontal':
-                output = output.flip(dims=(3, ))
-            elif flip_direction == 'vertical':
-                output = output.flip(dims=(2, ))
+        # flip = img_meta[0]['flip']
+        # if flip:
+        #     flip_direction = img_meta[0]['flip_direction']
+        #     assert flip_direction in ['horizontal', 'vertical']
+        #     if flip_direction == 'horizontal':
+        #         output = output.flip(dims=(3, ))
+        #     elif flip_direction == 'vertical':
+        #         output = output.flip(dims=(2, ))
 
         return output
 
-    def simple_test(self, img, img_meta, rescale=True):
+    def simple_test(self, img, rescale=True):
         """Simple test with single image."""
-        seg_logit = self.inference(img, img_meta, rescale)
+        seg_logit = self.inference(img, rescale)
         seg_pred = seg_logit.argmax(dim=1)
         if torch.onnx.is_in_onnx_export():
             # our inference backend only support 4D output

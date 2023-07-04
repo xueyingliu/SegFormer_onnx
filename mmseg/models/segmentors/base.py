@@ -42,7 +42,7 @@ class BaseSegmentor(nn.Module):
         pass
 
     @abstractmethod
-    def encode_decode(self, img, img_metas):
+    def encode_decode(self, img):
         """Placeholder for encode images with backbone and decode into a
         semantic segmentation map of the same size as input."""
         pass
@@ -53,7 +53,7 @@ class BaseSegmentor(nn.Module):
         pass
 
     @abstractmethod
-    def simple_test(self, img, img_meta, **kwargs):
+    def simple_test(self, img, **kwargs):
         """Placeholder for single image test."""
         pass
 
@@ -73,7 +73,7 @@ class BaseSegmentor(nn.Module):
             logger = logging.getLogger()
             logger.info(f'load model from: {pretrained}')
 
-    def forward_test(self, imgs, img_metas, **kwargs):
+    def forward_test(self, imgs, **kwargs):
         """
         Args:
             imgs (List[Tensor]): the outer list indicates test-time
@@ -83,32 +83,31 @@ class BaseSegmentor(nn.Module):
                 augs (multiscale, flip, etc.) and the inner list indicates
                 images in a batch.
         """
-        for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
-            if not isinstance(var, list):
-                raise TypeError(f'{name} must be a list, but got '
-                                f'{type(var)}')
+        # for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
+        #     if not isinstance(var, list):
+        #         raise TypeError(f'{name} must be a list, but got '
+        #                         f'{type(var)}')
 
-        num_augs = len(imgs)
-        if num_augs != len(img_metas):
-            raise ValueError(f'num of augmentations ({len(imgs)}) != '
-                             f'num of image meta ({len(img_metas)})')
+        # num_augs = len(imgs)
+        # if num_augs != len(img_metas):
+        #     raise ValueError(f'num of augmentations ({len(imgs)}) != '
+        #                      f'num of image meta ({len(img_metas)})')
         # all images in the same aug batch all of the same ori_shape and pad
         # shape
-        for img_meta in img_metas:
-            ori_shapes = [_['ori_shape'] for _ in img_meta]
-            assert all(shape == ori_shapes[0] for shape in ori_shapes)
-            img_shapes = [_['img_shape'] for _ in img_meta]
-            assert all(shape == img_shapes[0] for shape in img_shapes)
-            pad_shapes = [_['pad_shape'] for _ in img_meta]
-            assert all(shape == pad_shapes[0] for shape in pad_shapes)
+        # for img_meta in img_metas:
+        #     ori_shapes = [_['ori_shape'] for _ in img_meta]
+        #     assert all(shape == ori_shapes[0] for shape in ori_shapes)
+        #     img_shapes = [_['img_shape'] for _ in img_meta]
+        #     assert all(shape == img_shapes[0] for shape in img_shapes)
+        #     pad_shapes = [_['pad_shape'] for _ in img_meta]
+        #     assert all(shape == pad_shapes[0] for shape in pad_shapes)
 
-        if num_augs == 1:
-            return self.simple_test(imgs[0], img_metas[0], **kwargs)
-        else:
-            return self.aug_test(imgs, img_metas, **kwargs)
+        print('imgs: ', imgs[0].shape)
+        return self.simple_test(imgs, **kwargs)
+
 
     @auto_fp16(apply_to=('img', ))
-    def forward(self, img, img_metas, return_loss=True, **kwargs):
+    def forward(self, img, return_loss=True, **kwargs):
         """Calls either :func:`forward_train` or :func:`forward_test` depending
         on whether ``return_loss`` is ``True``.
 
@@ -118,10 +117,12 @@ class BaseSegmentor(nn.Module):
         should be double nested (i.e.  List[Tensor], List[List[dict]]), with
         the outer list indicating test time augmentations.
         """
-        if return_loss:
-            return self.forward_train(img, img_metas, **kwargs)
-        else:
-            return self.forward_test(img, img_metas, **kwargs)
+        return self.forward_test(img, **kwargs)
+        # if return_loss:
+        #     return self.forward_test(img, **kwargs)
+        #     # return self.forward_train(img, img_metas = True, **kwargs)
+        # else:
+        #     return self.forward_test(img, **kwargs)
 
     def train_step(self, data_batch, optimizer, **kwargs):
         """The iteration step during training.
@@ -251,7 +252,7 @@ class BaseSegmentor(nn.Module):
             color_seg[seg == label, :] = color
         # convert to BGR
         color_seg = color_seg[..., ::-1]
-
+        img = mmcv.imresize_like(img, color_seg)
         # from IPython import embed; embed(header='debug vis')
         img = img * 0.5 + color_seg * 0.5
         img = img.astype(np.uint8)

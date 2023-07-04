@@ -189,7 +189,7 @@ class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
         losses = self.losses(seg_logits, gt_semantic_seg)
         return losses
 
-    def forward_test(self, inputs, img_metas, test_cfg):
+    def forward_test(self, inputs):
         """Forward function for testing.
 
         Args:

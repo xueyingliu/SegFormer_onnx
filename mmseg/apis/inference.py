@@ -6,9 +6,13 @@ from mmcv.runner import load_checkpoint
 
 from mmseg.datasets.pipelines import Compose
 from mmseg.models import build_segmentor
+
 from torchvision.transforms import Resize 
+import torch
 import onnx
+import onnxruntime as ort
 import numpy as np
+import copy
 
 def init_segmentor(config, checkpoint=None, device='cuda:0'):
     """Initialize a segmentor from config file.
@@ -82,6 +86,7 @@ def inference_segmentor(model, img):
     cfg = model.cfg
     device = next(model.parameters()).device  # model device
     # build the data pipeline
+    pipe = cfg.data.test.pipeline[1:]
     test_pipeline = [LoadImage()] + cfg.data.test.pipeline[1:]
     test_pipeline = Compose(test_pipeline)
     # prepare data
@@ -93,30 +98,65 @@ def inference_segmentor(model, img):
         data = scatter(data, [device])[0]
     else:
         data['img_metas'] = [i.data[0] for i in data['img_metas']]
-    torch_resize = Resize([512,512])    
-    input_data_img = torch_resize(data['img'][0])
-    input_data_metas = data['img_metas'][0][0]
+
     # forward the model
+    torch_resize = Resize([512,512])
+    input_data = torch_resize(data['img'][0])
     with torch.no_grad():
+        # keys = data.type
+        # input_data = **data
         model = model.eval()
+        # torch.onnx.export(
+        #     model,
+        #     data['img'][0],
+        #     "segformer.b1.512x512.ade.160k.onnx",
+        #     verbose=True, 
+        #     input_names=['img'], 
+        #     output_names=['logits'])
         # 导出onnx
         torch.onnx.export(
             model,
-            (input_data_img,data['img_metas']),
+            input_data,
             "segformer.b1.512x512.ade.160k.onnx",
             verbose=True, 
-            input_names=['img', 'img_metas'], 
-            output_names=['logits'])
+            input_names=['img'], 
+            output_names=['logits'],
+            opset_version=11)
 
         # 加载ONNX模型
         onnx_model = onnx.load('segformer.b1.512x512.ade.160k.onnx')
-        ort_session = ort.InferenceSession('segformer.b1.512x512.ade.160k.onnx')
-        outputs = ort_session.run(None, {'img': input_data_img.cpu().numpy(), 'img_metas': data['img_metas'][0]})
+        ort_session = ort.InferenceSession('segformer.b1.512x512.ade.160k.onnx', providers=['CUDAExecutionProvider'])
+        ort_img_cpu = input_data.cpu()
+        # max_cpu, min_cpu = torch.max(ort_img_cpu), torch.min(ort_img_cpu)
+        ort_img_np = np.around(ort_img_cpu.numpy(), 4)
+        outputs = ort_session.run(None, {'img': ort_img_np})
         outputs[0] =  np.squeeze(outputs[0])
+        # input_data = mmcv.imresize(data['img'][0], (512,512))
+        result = model(return_loss=False, rescale=True, img=input_data)
+        # max_re, min_re = torch.max(result), torch.min(result)
+    return outputs
 
-        result = model(return_loss=False, rescale=True, **data)
-    return result
 
+def get_layer_output(model, image):
+    ori_output = copy.deepcopy(model.graph.output)
+    
+    for node in model.graph.node:
+        for output in node.output:
+            model.graph.output.extend([onnx.ValueInfoProto(name=output)])
+    
+    ort_session = ort.InferenceSession(model.SerializeToString())
+    
+    
+    ort_inputs = {}
+    
+    for i, input_ele in enumerate(ort_session.get_inputs()):
+        ort_inputs[input_ele.name] = image
+        
+    outputs = [x.name for x in ort_session.get_outputs()]
+    ort_outs = ort_session.run(outputs, ort_inputs)
+    ort_outs = OrderedDict(zip(outputs, ort_outs))
+    
+    return ort_outs
 
 def show_result_pyplot(model, img, result, palette=None, fig_size=(15, 10)):
     """Visualize the segmentation results on the image.
